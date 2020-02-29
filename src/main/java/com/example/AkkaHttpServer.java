@@ -29,11 +29,12 @@ public class AkkaHttpServer implements AutoCloseable{
     private final CompletionStage<ServerBinding> binding;
     private List<String> names;
     private List<String> states;
+    private Map<String, Person> persons;
     private int port;
 
     public AkkaHttpServer(String[] args) {
         processArgs(args);
-
+        persons = buildPersons();
         system = ActorSystem.create("routes");
 
         final Http http = Http.get(system);
@@ -44,11 +45,12 @@ public class AkkaHttpServer implements AutoCloseable{
                 ConnectHttp.toHost("localhost", 8080), materializer);
     }
 
-    private Route createRoute() {
-        return concat(
-                path("hello", () ->
-                        get(() ->
-                                complete("<h1>Say hello to akka-http</h1>"))));
+    private Route personsRoute() {
+        return get(() ->
+                persons.entrySet().stream().map(entry ->
+                                path(entry.getKey(), () -> complete(entry.getValue().getState()))
+                        ).reduce(reject(), Route::orElse)
+        );
     }
 
     @Override
@@ -82,7 +84,7 @@ public class AkkaHttpServer implements AutoCloseable{
                 continue;
             }
 
-            currentList.add(arg.replace("(\\s|,)", ""));
+            currentList.add(arg.replaceAll("(\\s|,)", ""));
         }
 
         if (portParameters.size() > 1) {
@@ -90,8 +92,21 @@ public class AkkaHttpServer implements AutoCloseable{
         }
 
         port = portParameters.isEmpty() ? DEFAULT_PORT : Integer.parseInt(portParameters.get(0));
-        names = nameParameters.isEmpty() ? DEFAULT_NAMES : nameParameters;
-        states = stateParameters.isEmpty() ? DEFAULT_STATES : stateParameters;
+        names = nameParameters;
+        states = stateParameters;
+    }
+
+    Map<String, Person> buildPersons() {
+        Map<String, Person> result = new HashMap<>();
+        for (int i = 0; i < names.size(); i++) {
+            Person person = new Person(names.get(i));
+            result.put(person.getName(), person);
+            if (states.size() > i)
+                person.setState(states.get(i));
+
+        }
+
+        return result;
     }
 
     public static void main(String[] args) throws Exception {
