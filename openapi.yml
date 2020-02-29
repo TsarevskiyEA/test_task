@@ -1,0 +1,52 @@
+swagger: "2.0"
+info:
+  description: "Service for test task desctiprion."
+  version: "1.0.0"
+  title: "Test task API"
+basePath: "/"
+tags:
+  - name: "person"
+    description: "Everything about Persons in system"
+schemes:
+  - "http"
+paths:
+  /check/{name}:
+    get:
+      tags:
+        - "person"
+      summary: "Check person state"
+      description: ""
+      operationId: "check"
+      parameters:
+        - name: "name"
+          in: "path"
+          description: "Person name"
+          required: true
+          type: "string"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Person"
+        404:
+          description: "Person not found"
+definitions:
+  Person:
+    type: "object"
+    required:
+      - "name"
+      - "state"
+      - "since"
+    properties:
+      name:
+        type: "string"
+        example: "Alice"
+      state:
+        type: "string"
+        example: "good"
+      since:
+        type: "integer"
+        format: "int64"
+        example: 1582984365899
