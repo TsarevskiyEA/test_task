@@ -108,7 +108,18 @@ public class AkkaHttpServer implements AutoCloseable{
     }
 
     public static void main(String[] args) throws Exception {
-        // boot up server using the route as defined below
+        if (args.length != 0 && "help".equalsIgnoreCase(args[0].replaceAll("-", ""))) {
+            System.out.println("" +
+                    "Usage: myserver [-p SERVICE_PORT] [-n NAME...] [-s STATE...]\n" +
+                    "Default values:\n" +
+                    "  PORT             8080\n" +
+                    "  STATE            default_state\n" +
+                    "Examples:\n" +
+                    "  myserver -p 8090 -n Alice, Bob - s good, bad.\n" +
+                    "");
+            return;
+        }
+
         try (AkkaHttpServer server = new AkkaHttpServer(args)) {
             System.out.println("Server online at http://localhost:" + server.port + "/\nPress RETURN to stop...");
             System.in.read(); // let it run until user presses return
