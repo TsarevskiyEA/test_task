@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
 import static akka.http.javadsl.server.Directives.*;
+import static akka.http.javadsl.server.PathMatchers.segment;
 
 public class AkkaHttpServer implements AutoCloseable{
     private static final int DEFAULT_PORT = 8080;
@@ -46,7 +47,7 @@ public class AkkaHttpServer implements AutoCloseable{
     private Route personsRoute() {
         return get(() ->
                 persons.entrySet().stream().map(entry ->
-                                path(entry.getKey(), () -> complete(entry.getValue().toString()))
+                                path(segment("check").slash().concat(entry.getKey()), () -> complete(entry.getValue().toString()))
                         ).reduce(reject(), Route::orElse)
         );
     }
