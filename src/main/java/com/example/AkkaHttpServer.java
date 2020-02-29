@@ -21,8 +21,6 @@ import java.util.concurrent.CompletionStage;
 import static akka.http.javadsl.server.Directives.*;
 
 public class AkkaHttpServer implements AutoCloseable{
-    private static final List<String> DEFAULT_STATES = Collections.singletonList("default_state");
-    private static final List<String> DEFAULT_NAMES = Collections.singletonList("default_name");
     private static final int DEFAULT_PORT = 8080;
 
     private final ActorSystem system;
@@ -40,9 +38,9 @@ public class AkkaHttpServer implements AutoCloseable{
         final Http http = Http.get(system);
         final ActorMaterializer materializer = ActorMaterializer.create(system);
 
-        final Flow<HttpRequest, HttpResponse, NotUsed> routeFlow = createRoute().flow(system, materializer);
+        final Flow<HttpRequest, HttpResponse, NotUsed> routeFlow = personsRoute().flow(system, materializer);
         binding = http.bindAndHandle(routeFlow,
-                ConnectHttp.toHost("localhost", 8080), materializer);
+                ConnectHttp.toHost("localhost", port), materializer);
     }
 
     private Route personsRoute() {
