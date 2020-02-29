@@ -1,0 +1,104 @@
+package com.example;
+
+import akka.NotUsed;
+import akka.actor.ActorSystem;
+import akka.http.javadsl.ConnectHttp;
+import akka.http.javadsl.Http;
+import akka.http.javadsl.ServerBinding;
+import akka.http.javadsl.model.HttpRequest;
+import akka.http.javadsl.model.HttpResponse;
+import akka.http.javadsl.server.Route;
+import akka.stream.ActorMaterializer;
+import akka.stream.javadsl.Flow;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletionStage;
+
+import static akka.http.javadsl.server.Directives.*;
+
+public class AkkaHttpServer implements AutoCloseable{
+    private static final List<String> DEFAULT_STATES = Collections.singletonList("default_state");
+    private static final List<String> DEFAULT_NAMES = Collections.singletonList("default_name");
+    private static final int DEFAULT_PORT = 8080;
+
+    private final ActorSystem system;
+    private final CompletionStage<ServerBinding> binding;
+    private List<String> names;
+    private List<String> states;
+    private int port;
+
+    public AkkaHttpServer(String[] args) {
+        processArgs(args);
+
+        system = ActorSystem.create("routes");
+
+        final Http http = Http.get(system);
+        final ActorMaterializer materializer = ActorMaterializer.create(system);
+
+        final Flow<HttpRequest, HttpResponse, NotUsed> routeFlow = createRoute().flow(system, materializer);
+        binding = http.bindAndHandle(routeFlow,
+                ConnectHttp.toHost("localhost", 8080), materializer);
+    }
+
+    private Route createRoute() {
+        return concat(
+                path("hello", () ->
+                        get(() ->
+                                complete("<h1>Say hello to akka-http</h1>"))));
+    }
+
+    @Override
+    public void close() {
+        binding
+                .thenCompose(ServerBinding::unbind) // trigger unbinding from the port
+                .thenAccept(unbound -> system.terminate()); // and shutdown when done
+    }
+
+    private void processArgs(String[] args) {
+        if (args.length == 0) {
+            System.out.println("No parameters passed. Defaults will be used instead.");
+            names = Collections.singletonList("default_name");
+            states = Collections.singletonList("default_state");
+            port = 8080;
+            return;
+        }
+
+        List<String> portParameters = new ArrayList<>();
+        List<String> nameParameters = new ArrayList<>();
+        List<String> stateParameters = new ArrayList<>();
+        List<String> currentList = portParameters;
+        Map<String, List<String>> parameterKeysMap = new HashMap<>();
+        parameterKeysMap.put("-p", portParameters);
+        parameterKeysMap.put("-n", nameParameters);
+        parameterKeysMap.put("-s", stateParameters);
+        for (String arg : args) {
+            List<String> list = parameterKeysMap.get(arg);
+            if (list != null) {
+                currentList = list;
+                continue;
+            }
+
+            currentList.add(arg.replace("(\\s|,)", ""));
+        }
+
+        if (portParameters.size() > 1) {
+            System.out.println("To much port parameters passed. Only FIRST will be used and others will be ignored");
+        }
+
+        port = portParameters.isEmpty() ? DEFAULT_PORT : Integer.parseInt(portParameters.get(0));
+        names = nameParameters.isEmpty() ? DEFAULT_NAMES : nameParameters;
+        states = stateParameters.isEmpty() ? DEFAULT_STATES : stateParameters;
+    }
+
+    public static void main(String[] args) throws Exception {
+        // boot up server using the route as defined below
+        try (AkkaHttpServer server = new AkkaHttpServer(args)) {
+            System.out.println("Server online at http://localhost:" + server.port + "/\nPress RETURN to stop...");
+            System.in.read(); // let it run until user presses return
+        }
+    }
+}
