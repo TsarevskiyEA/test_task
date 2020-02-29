@@ -25,14 +25,13 @@ public class AkkaHttpServer implements AutoCloseable{
 
     private final ActorSystem system;
     private final CompletionStage<ServerBinding> binding;
-    private List<String> names;
     private List<String> states;
     private Map<String, Person> persons;
     private int port;
 
     public AkkaHttpServer(String[] args) {
         processArgs(args);
-        persons = buildPersons();
+        PersonStateManager personStateManager = new PersonStateManager(persons, states);
         system = ActorSystem.create("routes");
 
         final Http http = Http.get(system);
@@ -41,6 +40,7 @@ public class AkkaHttpServer implements AutoCloseable{
         final Flow<HttpRequest, HttpResponse, NotUsed> routeFlow = personsRoute().flow(system, materializer);
         binding = http.bindAndHandle(routeFlow,
                 ConnectHttp.toHost("localhost", port), materializer);
+        personStateManager.start();
     }
 
     private Route personsRoute() {
@@ -61,8 +61,8 @@ public class AkkaHttpServer implements AutoCloseable{
     private void processArgs(String[] args) {
         if (args.length == 0) {
             System.out.println("No parameters passed. Defaults will be used instead.");
-            names = Collections.singletonList("default_name");
             states = Collections.singletonList("default_state");
+            persons = Collections.emptyMap();
             port = 8080;
             return;
         }
@@ -89,12 +89,12 @@ public class AkkaHttpServer implements AutoCloseable{
             System.out.println("To much port parameters passed. Only FIRST will be used and others will be ignored");
         }
 
-        port = portParameters.isEmpty() ? DEFAULT_PORT : Integer.parseInt(portParameters.get(0));
-        names = nameParameters;
         states = stateParameters;
+        persons = buildPersons(nameParameters, states);
+        port = portParameters.isEmpty() ? DEFAULT_PORT : Integer.parseInt(portParameters.get(0));
     }
 
-    Map<String, Person> buildPersons() {
+    Map<String, Person> buildPersons(List<String> names, List<String> states) {
         Map<String, Person> result = new HashMap<>();
         for (int i = 0; i < names.size(); i++) {
             Person person = new Person(names.get(i));
