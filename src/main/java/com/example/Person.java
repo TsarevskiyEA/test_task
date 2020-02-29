@@ -29,4 +29,13 @@ public class Person {
     public long getStateChangeTime() {
         return stateChangeTime;
     }
+
+    @Override
+    public String toString() {
+        return '{' +
+                "\"name\":\"" + name + '\"' +
+                ",\"state\":\"" + state + '\"' +
+                ",\"since\":\"" + stateChangeTime  + '\"' +
+                '}';
+    }
 }

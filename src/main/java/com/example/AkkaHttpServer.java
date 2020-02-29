@@ -46,7 +46,7 @@ public class AkkaHttpServer implements AutoCloseable{
     private Route personsRoute() {
         return get(() ->
                 persons.entrySet().stream().map(entry ->
-                                path(entry.getKey(), () -> complete(entry.getValue().getState()))
+                                path(entry.getKey(), () -> complete(entry.getValue().toString()))
                         ).reduce(reject(), Route::orElse)
         );
     }
